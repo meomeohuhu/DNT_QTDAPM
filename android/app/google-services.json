@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "73392058694",
+    "project_id": "dnt-q-90cae",
+    "storage_bucket": "dnt-q-90cae.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:73392058694:android:b6cf81a58bad2c32647547",
+        "android_client_info": {
+          "package_name": "com.vku.freshfarm.freshfarm"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAAjfWnxFj_8zm0DJGrPTvhJHZ_wwpbP-0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
