@@ -150,3 +150,18 @@ flutter test     # Kết quả: All tests passed!
 
 ---
 *Chúc nhóm bảo vệ thành công rực rỡ và đạt điểm số cao nhất cho cả 2 môn học!*
+
+## VI. Đối chiếu với Project Plan
+
+| Hạng mục | Phạm vi bản demo Flutter |
+| --- | --- |
+| 4.1 Người dùng | Chuyển giữa bốn vai trò mẫu. Khách có thể sửa tên, điện thoại và địa chỉ giao hàng. Hồ sơ được lưu trên thiết bị và dùng để điền sẵn khi đặt hàng. |
+| 4.2–4.4 Sản phẩm, giỏ và đơn hàng | Danh mục có tìm kiếm và lọc. Giỏ tính phí giao hàng, khuyến mãi và tổng tiền. Đơn chạy qua các trạng thái xử lý và có thể hủy khi chờ xác nhận. |
+| 4.5, 4.8 Thanh toán và vận chuyển | COD và VietQR mô phỏng. Người mua chọn hãng giao, ghi chú và xem mã vận đơn mẫu. |
+| 4.6, 4.7, 4.9 Nhà sản xuất, kho và truy xuất | Tạo lô, điều chỉnh tồn sản phẩm, quét QR hoặc nhập mã lô để xem chuỗi nguồn gốc. |
+| 4.10 Khuyến mãi | Trong giỏ, chọn `FRESH20` để giảm 20.000 đ khi tiền hàng từ 200.000 đ. |
+| 4.11, 4.15 Báo cáo và trang quản trị | Dashboard doanh thu, đơn hàng, tồn kho và EVM. Chọn **Xuất đơn hàng CSV** trong tab **Vận hành TMĐT**. |
+| 4.12–4.14 Ứng dụng khách, kho và camera | Dùng chung mã nguồn Flutter cho các màn hình mua hàng, kho, camera QR và sinh VietQR. |
+| 4.16 Kết nối dữ liệu | Lưu cục bộ mặc định. Firebase là tùy chọn cho dữ liệu demo. |
+
+Các hạng mục sản xuất trong plan còn mở gồm xác thực OTP và phân quyền máy chủ, đồng bộ đơn và giao dịch kho giữa thiết bị, đổi/trả, thanh toán qua cổng và webhook, tích hợp hãng giao, đợt flash sale và push notification, QR chống sao chép, đo hiệu năng trên thiết bị, nghiệm thu và triển khai chính thức. Plan ghi NestJS, React, React Native, MySQL và Redis. Mã nguồn demo dùng Flutter và có tích hợp Firebase tùy chọn.
