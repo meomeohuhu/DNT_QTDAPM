@@ -3,7 +3,20 @@ import '../models/product_model.dart';
 import '../models/cart_item_model.dart';
 
 class CartProvider extends ChangeNotifier {
+  static const voucherCode = 'FRESH20';
+  static const voucherMinimum = 200000.0;
+  static const voucherDiscount = 20000.0;
+
   final List<CartItemModel> _items = [];
+  bool _voucherSelected = false;
+
+  bool get hasVoucher => _voucherSelected && subtotal >= voucherMinimum;
+
+  void toggleVoucher() {
+    if (subtotal < voucherMinimum) return;
+    _voucherSelected = !_voucherSelected;
+    notifyListeners();
+  }
 
   List<CartItemModel> get items => _items;
   int get itemCount => _items.fold(0, (sum, item) => sum + item.quantity);
@@ -17,9 +30,8 @@ class CartProvider extends ChangeNotifier {
   }
 
   double get discountAmount {
-    // 10% discount for orders over 400,000 VND
-    if (subtotal >= 400000) return 30000.0;
-    return 0.0;
+    final bulkDiscount = subtotal >= 400000 ? 30000.0 : 0.0;
+    return bulkDiscount + (hasVoucher ? voucherDiscount : 0.0);
   }
 
   double get totalAmount => (subtotal + shippingFee - discountAmount).clamp(0.0, double.infinity);
@@ -42,17 +54,20 @@ class CartProvider extends ChangeNotifier {
     final index = _items.indexWhere((item) => item.product.id == productId);
     if (index != -1) {
       _items[index].quantity = newQuantity;
+      if (subtotal < voucherMinimum) _voucherSelected = false;
       notifyListeners();
     }
   }
 
   void removeFromCart(String productId) {
     _items.removeWhere((item) => item.product.id == productId);
+    if (subtotal < voucherMinimum) _voucherSelected = false;
     notifyListeners();
   }
 
   void clearCart() {
     _items.clear();
+    _voucherSelected = false;
     notifyListeners();
   }
 }

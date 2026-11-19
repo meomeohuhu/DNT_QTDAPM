@@ -251,12 +251,21 @@ class CartScreen extends StatelessWidget {
                             ),
                           ],
                         ),
+                        ActionChip(
+                          avatar: Icon(cart.hasVoucher ? Icons.check : Icons.sell_outlined),
+                          label: Text(cart.hasVoucher
+                              ? 'Bỏ mã FRESH20'
+                              : 'FRESH20 giảm 20.000 đ từ 200.000 đ'),
+                          onPressed: cart.subtotal >= CartProvider.voucherMinimum
+                              ? cart.toggleVoucher
+                              : null,
+                        ),
                         if (cart.discountAmount > 0) ...[
                           const SizedBox(height: 6),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              const Text('Ưu đãi đơn lớn:', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                              const Text('Khuyến mãi:', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
                               Text('-${CurrencyFormatter.format(cart.discountAmount)}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.accent)),
                             ],
                           ),
