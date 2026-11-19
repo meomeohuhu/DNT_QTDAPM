@@ -31,7 +31,9 @@ class StorageService {
   static Future<void> saveOrders(List<OrderModel> orders) async {
     final prefs = await SharedPreferences.getInstance();
     final list = orders.map((o) => jsonEncode(o.toMap())).toList();
-    await prefs.setStringList(_keyOrders, list);
+    if (!await prefs.setStringList(_keyOrders, list)) {
+      throw StateError('Could not save orders');
+    }
   }
 
   static Future<List<OrderModel>?> getOrders() async {

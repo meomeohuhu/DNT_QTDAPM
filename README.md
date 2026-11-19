@@ -41,7 +41,7 @@ Dự án được thiết kế đồng bộ 100% giữa hai góc nhìn:
 
 ## II. 10 PHÂN HỆ NGHIỆP VỤ CỐT LÕI
 
-Ứng dụng hiện thực hóa trọn vẹn 10 phân hệ đã cam kết trong WBS và Báo cáo Chương 4:
+Bản demo Flutter tập trung vào các luồng chính trong WBS và Báo cáo Chương 4. Dữ liệu mặc định được lưu cục bộ và bốn vai trò được mô phỏng.
 
 1. **Xác thực & Phân quyền đa vai trò (RBAC):** Hỗ trợ 4 tác nhân hệ thống:
    - **Người tiêu dùng (Customer):** Mua hàng, lọc tiêu chuẩn VietGAP, quét QR, thanh toán VietQR.
@@ -52,7 +52,7 @@ Dự án được thiết kế đồng bộ 100% giữa hai góc nhìn:
 2. **Danh mục & Hồ sơ nông sản sạch:** Quản lý sản phẩm với hình ảnh chất lượng cao, chứng nhận VietGAP, GlobalGAP, Organic USDA, OCOP 4 sao, vùng trồng và số lượng tồn kho.
 3. **Giỏ hàng & Quản lý phiên mua sắm:** Đồng bộ dữ liệu, tự động tính phí vận chuyển, miễn phí ship cho đơn >300.000đ, chiết khấu đơn lớn >400.000đ.
 4. **Máy trạng thái đơn hàng (State Machine Pattern):** Quản lý vòng đời đơn qua 5 trạng thái: `Chờ xác nhận → Đã duyệt → Đang đóng gói → Đang giao → Đã giao / Hủy`.
-5. **Thanh toán VietQR Napas 247 & COD:** Tự động sinh mã VietQR động chuẩn ngân hàng Việt Nam (MBBank, STK, số tiền chính xác, nội dung `FF <mã_đơn>`) kèm hộp thoại đối soát mô phỏng.
+5. **Thanh toán VietQR Napas 247 & COD:** Tự động sinh mã VietQR động chuẩn ngân hàng Việt Nam (số tài khoản mẫu, số tiền và mã đơn) kèm hộp thoại đối soát mô phỏng.
 6. **Quản lý Hộ sản xuất & Nguồn cung:** Quản lý hồ sơ trang trại, diện tích canh tác (ha), giấy chứng nhận VietGAP, sản lượng cam kết và nhật ký mùa vụ.
 7. **Quản lý Kho & Lô hàng (Batch/Lot):** Quản lý tồn kho theo lô, cảnh báo tự động khi chạm ngưỡng tồn kho tối thiểu (<45 sản phẩm).
 8. **Điều phối Vận chuyển chuyên dụng:** Quản lý mã vận đơn (Tracking Code), nhiệt độ xe lạnh bảo quản nông sản 18°C - 22°C (AhaMove, Giao Hàng Nhanh, Viettel Post).
@@ -83,12 +83,11 @@ Dự án được thiết kế đồng bộ 100% giữa hai góc nhìn:
 ## IV. HƯỚNG DẪN CÀI ĐẶT & CHẠY ỨNG DỤNG
 
 ### 1. Yêu cầu môi trường
-- Đã cài đặt **Flutter SDK** (khuyến nghị Flutter 3.20 trở lên).
+- Đã cài đặt **Flutter SDK** từ 3.44, kèm Dart 3.12 trở lên theo `pubspec.yaml`.
 - Trình duyệt **Google Chrome** hoặc thiết bị di động / máy ảo Android/iOS.
 
 ### 2. Cài đặt các gói phụ thuộc
 ```bash
-cd DNT_CK
 flutter pub get
 ```
 
@@ -97,6 +96,8 @@ flutter pub get
 ```bash
 flutter run -d chrome
 ```
+
+Ứng dụng mặc định dùng dữ liệu demo cục bộ. Có thể bật kết nối Firebase bằng `--dart-define=FRESHFARM_FIREBASE=true`. Đơn hàng vẫn được lưu trên thiết bị. VietQR dùng để mô phỏng thanh toán trong buổi demo.
 
 ### 4. Chạy ứng dụng trên Máy tính macOS (Desktop)
 ```bash
@@ -128,7 +129,7 @@ flutter test     # Kết quả: All tests passed!
 3. Bấm **"Thêm vào giỏ"**, mở Giỏ hàng và bấm **"Tiến hành đặt hàng"**.
 4. Chọn phương thức thanh toán **"Chuyển khoản VietQR Napas 247"**.
 5. Hộp thoại **VietQR** hiện lên với mã QR động thật của ngân hàng MB, đúng số tiền và nội dung đơn hàng.
-6. Bấm **"Mô phỏng: Đã chuyển tiền thành công"** → Đơn hàng được tạo và lưu trữ realtime.
+6. Bấm **"Mô phỏng: Đã chuyển tiền thành công"** → Đơn hàng được tạo và lưu trên thiết bị.
 
 ### Bước 3: Demo tính năng quét mã QR truy xuất nguồn gốc (2 phút)
 1. Nhấn vào biểu tượng **Mã QR** trên thanh AppBar.

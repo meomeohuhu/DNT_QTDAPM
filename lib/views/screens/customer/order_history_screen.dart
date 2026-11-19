@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../models/order_model.dart';
+import '../../../providers/auth_provider.dart';
 import '../../../providers/order_provider.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
@@ -30,7 +31,11 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> with SingleTick
 
   @override
   Widget build(BuildContext context) {
-    final orderProv = Provider.of<OrderProvider>(context);
+    final orderProv = context.watch<OrderProvider>();
+    final user = context.watch<AuthProvider>().currentUser;
+    final orders = user == null
+        ? <OrderModel>[]
+        : orderProv.getOrdersForUser(user.id);
 
     return Scaffold(
       appBar: AppBar(
@@ -54,14 +59,16 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> with SingleTick
       body: TabBarView(
         controller: _tabController,
         children: [
-          _buildOrderList(orderProv.orders),
-          _buildOrderList(orderProv.getOrdersByStatus(OrderStatus.pending)),
+          _buildOrderList(orders),
+          _buildOrderList(orders.where((o) => o.status == OrderStatus.pending).toList()),
           _buildOrderList(
-            orderProv.orders
-                .where((o) => o.status == OrderStatus.packing || o.status == OrderStatus.shipping)
+            orders
+                .where((o) => o.status == OrderStatus.confirmed ||
+                    o.status == OrderStatus.packing ||
+                    o.status == OrderStatus.shipping)
                 .toList(),
           ),
-          _buildOrderList(orderProv.getOrdersByStatus(OrderStatus.delivered)),
+          _buildOrderList(orders.where((o) => o.status == OrderStatus.delivered).toList()),
         ],
       ),
     );

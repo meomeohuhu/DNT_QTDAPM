@@ -3,7 +3,6 @@ import 'package:uuid/uuid.dart';
 import '../models/order_model.dart';
 import '../services/mock_data_service.dart';
 import '../services/storage_service.dart';
-import '../services/firebase_service.dart';
 
 class OrderProvider extends ChangeNotifier {
   List<OrderModel> _orders = [];
@@ -12,8 +11,10 @@ class OrderProvider extends ChangeNotifier {
   List<OrderModel> get orders => _orders;
   bool get isLoading => _isLoading;
 
+  late final Future<void> loadCompletion;
+
   OrderProvider() {
-    loadOrders();
+    loadCompletion = loadOrders();
   }
 
   Future<void> loadOrders() async {
@@ -41,11 +42,21 @@ class OrderProvider extends ChangeNotifier {
     return _orders.where((o) => o.userId == userId).toList();
   }
 
+  String newOrderId() {
+    final now = DateTime.now();
+    final date = now.toIso8601String().substring(0, 10).replaceAll('-', '');
+    final suffix = const Uuid().v4().substring(0, 8).toUpperCase();
+    return 'FF-$date-$suffix';
+  }
+
   Future<OrderModel> createOrder({
+    required String orderId,
     required String userId,
     required String userName,
     required String userPhone,
     required String shippingAddress,
+    required String deliveryPartner,
+    String deliveryNote = '',
     required List<OrderItemModel> items,
     required double totalAmount,
     required double shippingFee,
@@ -54,33 +65,29 @@ class OrderProvider extends ChangeNotifier {
     required PaymentMethod paymentMethod,
     bool isPaid = false,
   }) async {
-    final now = DateTime.now();
-    final dateStr = '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}';
-    final randomSuffix = const Uuid().v4().substring(0, 4).toUpperCase();
-    final orderId = 'FF-$dateStr-$randomSuffix';
-
     final newOrder = OrderModel(
       id: orderId,
       userId: userId,
       userName: userName,
       userPhone: userPhone,
       shippingAddress: shippingAddress,
+      deliveryNote: deliveryNote,
       items: items,
       totalAmount: totalAmount,
       shippingFee: shippingFee,
       discountAmount: discountAmount,
       finalAmount: finalAmount,
       paymentMethod: paymentMethod,
-      isPaid: isPaid || paymentMethod == PaymentMethod.vietqr,
+      isPaid: isPaid,
       status: OrderStatus.pending,
-      createdAt: now,
-      deliveryTrackingCode: 'COLD-FF-$randomSuffix',
-      deliveryPartner: 'AhaMove Xe Lạnh Chuẩn 18°C',
+      createdAt: DateTime.now(),
+      deliveryTrackingCode: 'COLD-FF-${orderId.split('-').last}',
+      deliveryPartner: deliveryPartner,
     );
 
-    _orders.insert(0, newOrder);
-    await StorageService.saveOrders(_orders);
-    await FirebaseService.syncOrderToFirestore(newOrder);
+    final updatedOrders = [newOrder, ..._orders];
+    await StorageService.saveOrders(updatedOrders);
+    _orders = updatedOrders;
     notifyListeners();
     return newOrder;
   }
@@ -96,7 +103,6 @@ class OrderProvider extends ChangeNotifier {
           current.isPaid = true;
         }
         await StorageService.saveOrders(_orders);
-        await FirebaseService.syncOrderToFirestore(current);
         notifyListeners();
       }
     }
@@ -107,7 +113,6 @@ class OrderProvider extends ChangeNotifier {
     if (index != -1) {
       _orders[index].status = OrderStatus.cancelled;
       await StorageService.saveOrders(_orders);
-      await FirebaseService.syncOrderToFirestore(_orders[index]);
       notifyListeners();
     }
   }

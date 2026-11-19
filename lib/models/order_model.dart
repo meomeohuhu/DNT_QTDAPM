@@ -106,6 +106,7 @@ class OrderModel {
   final String userName;
   final String userPhone;
   final String shippingAddress;
+  final String deliveryNote;
   final List<OrderItemModel> items;
   final double totalAmount;
   final double shippingFee;
@@ -124,6 +125,7 @@ class OrderModel {
     required this.userName,
     required this.userPhone,
     required this.shippingAddress,
+    this.deliveryNote = '',
     required this.items,
     required this.totalAmount,
     required this.shippingFee,
@@ -144,6 +146,7 @@ class OrderModel {
       'userName': userName,
       'userPhone': userPhone,
       'shippingAddress': shippingAddress,
+      'deliveryNote': deliveryNote,
       'items': items.map((e) => e.toMap()).toList(),
       'totalAmount': totalAmount,
       'shippingFee': shippingFee,
@@ -165,6 +168,7 @@ class OrderModel {
       userName: map['userName'] ?? '',
       userPhone: map['userPhone'] ?? '',
       shippingAddress: map['shippingAddress'] ?? '',
+      deliveryNote: map['deliveryNote'] ?? '',
       items: (map['items'] as List<dynamic>?)
               ?.map((item) => OrderItemModel.fromMap(item as Map<String, dynamic>))
               .toList() ??

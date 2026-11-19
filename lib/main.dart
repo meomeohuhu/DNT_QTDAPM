@@ -16,8 +16,9 @@ import 'views/screens/admin/admin_dashboard_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Safely initialize Firebase (with automatic graceful offline fallback)
-  await FirebaseService.initialize();
+  if (const bool.fromEnvironment('FRESHFARM_FIREBASE')) {
+    await FirebaseService.initialize();
+  }
 
   runApp(const FreshFarmApp());
 }

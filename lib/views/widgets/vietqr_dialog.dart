@@ -7,13 +7,11 @@ import '../../core/utils/vietqr_generator.dart';
 class VietQRDialog extends StatelessWidget {
   final String orderId;
   final double amount;
-  final VoidCallback onPaymentConfirmed;
 
   const VietQRDialog({
     super.key,
     required this.orderId,
     required this.amount,
-    required this.onPaymentConfirmed,
   });
 
   @override
@@ -51,7 +49,7 @@ class VietQRDialog extends StatelessWidget {
                       ),
                       const SizedBox(width: 8),
                       const Text(
-                        'VietQR Chuyển khoản',
+                        'VietQR mô phỏng',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -66,6 +64,8 @@ class VietQRDialog extends StatelessWidget {
                   ),
                 ],
               ),
+              const SizedBox(height: 12),
+              const Text('Mã dùng để trình diễn. Vui lòng không chuyển tiền.'),
               const SizedBox(height: 12),
               // Bank Header Card
               Container(
@@ -226,8 +226,7 @@ class VietQRDialog extends StatelessWidget {
                 width: double.infinity,
                 child: ElevatedButton.icon(
                   onPressed: () {
-                    Navigator.of(context).pop();
-                    onPaymentConfirmed();
+                    Navigator.of(context).pop(true);
                   },
                   icon: const Icon(Icons.check_circle, size: 18),
                   label: const Text('Mô phỏng: Đã chuyển tiền thành công'),

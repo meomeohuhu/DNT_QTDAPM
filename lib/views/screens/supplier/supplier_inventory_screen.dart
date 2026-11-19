@@ -213,6 +213,11 @@ class _SupplierInventoryScreenState extends State<SupplierInventoryScreen> with 
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
+                            if (order.deliveryNote.isNotEmpty)
+                              Text(
+                                'Ghi chú: ${order.deliveryNote}',
+                                style: const TextStyle(fontSize: 11),
+                              ),
                             const SizedBox(height: 6),
                             Text(
                               '${order.items.length} món • Tổng: ${CurrencyFormatter.format(order.finalAmount)}',
@@ -223,9 +228,11 @@ class _SupplierInventoryScreenState extends State<SupplierInventoryScreen> with 
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text(
-                                  'Đối tác: ${order.deliveryPartner}',
-                                  style: const TextStyle(fontSize: 11, color: AppColors.textMuted),
+                                Expanded(
+                                  child: Text(
+                                    'Đối tác: ${order.deliveryPartner}',
+                                    style: const TextStyle(fontSize: 11, color: AppColors.textMuted),
+                                  ),
                                 ),
                                 if (nextState != null)
                                   ElevatedButton.icon(

@@ -24,6 +24,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   late TextEditingController _addressController;
   late TextEditingController _noteController;
 
+  bool _placingOrder = false;
   PaymentMethod _selectedPayment = PaymentMethod.vietqr;
   String _selectedLogistics = 'AhaMove Xe Lạnh Chuẩn 18°C';
 
@@ -56,17 +57,16 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     super.dispose();
   }
 
-  Future<void> _submitOrder({bool isPrepaid = false}) async {
+  Future<void> _submitOrder(String orderId, {required bool isPrepaid}) async {
     final cart = Provider.of<CartProvider>(context, listen: false);
     final orderProv = Provider.of<OrderProvider>(context, listen: false);
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final prodProv = Provider.of<ProductProvider>(context, listen: false);
 
-    if (!_formKey.currentState!.validate()) return;
+    await orderProv.loadCompletion;
+    if (!mounted || !_canPlaceOrder()) return;
 
     final orderItems = cart.items.map((item) {
-      // Deduct stock for each product
-      prodProv.deductStock(item.product.id, item.quantity);
       return OrderItemModel(
         productId: item.product.id,
         productName: item.product.name,
@@ -78,10 +78,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     }).toList();
 
     final order = await orderProv.createOrder(
+      orderId: orderId,
       userId: auth.currentUser?.id ?? 'USR-001',
       userName: _nameController.text.trim(),
       userPhone: _phoneController.text.trim(),
       shippingAddress: _addressController.text.trim(),
+      deliveryPartner: _selectedLogistics,
+      deliveryNote: _noteController.text.trim(),
       items: orderItems,
       totalAmount: cart.subtotal,
       shippingFee: cart.shippingFee,
@@ -91,6 +94,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       isPaid: isPrepaid,
     );
 
+    for (final item in orderItems) {
+      prodProv.deductStock(item.productId, item.quantity);
+    }
     cart.clearCart();
 
     if (mounted) {
@@ -107,25 +113,53 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     }
   }
 
-  void _handlePlaceOrder() {
-    final cart = Provider.of<CartProvider>(context, listen: false);
+  bool _canPlaceOrder() {
+    if (!_formKey.currentState!.validate()) return false;
+    final cart = context.read<CartProvider>();
+    final products = context.read<ProductProvider>();
+    if (cart.items.isEmpty) return false;
 
-    if (_selectedPayment == PaymentMethod.vietqr) {
-      // Open VietQR modal for dynamic QR code payment
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (ctx) => VietQRDialog(
-          orderId: 'DEMO-${DateTime.now().millisecondsSinceEpoch % 10000}',
-          amount: cart.totalAmount,
-          onPaymentConfirmed: () {
-            _submitOrder(isPrepaid: true);
-          },
-        ),
-      );
-    } else {
-      // COD directly
-      _submitOrder(isPrepaid: false);
+    for (final item in cart.items) {
+      final available = products.getProductById(item.product.id)?.stockQuantity ?? 0;
+      if (item.quantity > available) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${item.product.name} chỉ còn $available trong kho.')),
+        );
+        return false;
+      }
+    }
+    return true;
+  }
+
+  Future<void> _handlePlaceOrder() async {
+    if (_placingOrder || !_canPlaceOrder()) return;
+    final cart = context.read<CartProvider>();
+    final orderId = context.read<OrderProvider>().newOrderId();
+    final isPrepaid = _selectedPayment == PaymentMethod.vietqr;
+    setState(() => _placingOrder = true);
+
+    try {
+      if (isPrepaid) {
+        final confirmed = await showDialog<bool>(
+          context: context,
+          barrierDismissible: false,
+          builder: (_) => VietQRDialog(
+            orderId: orderId,
+            amount: cart.totalAmount,
+          ),
+        );
+        if (!mounted || confirmed != true) return;
+      }
+
+      await _submitOrder(orderId, isPrepaid: isPrepaid);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Chưa lưu được đơn hàng. Vui lòng thử lại.')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _placingOrder = false);
     }
   }
 
@@ -323,7 +357,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: _handlePlaceOrder,
+                    onPressed: _placingOrder ? null : _handlePlaceOrder,
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
                     ),
