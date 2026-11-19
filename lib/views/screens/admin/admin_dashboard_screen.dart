@@ -1,3 +1,7 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
+import 'package:file_saver/file_saver.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -32,6 +36,44 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
   void dispose() {
     _tabController.dispose();
     super.dispose();
+  }
+
+  Future<void> _exportOrders(OrderProvider orders) async {
+    final rows = [
+      ['Mã đơn', 'Ngày tạo', 'Trạng thái', 'Thanh toán', 'Đã thanh toán', 'Tổng (VND)'],
+      for (final order in orders.orders)
+        [
+          order.id,
+          order.createdAt.toIso8601String(),
+          order.status.displayName,
+          order.paymentMethod.displayName,
+          order.isPaid ? 'Có' : 'Không',
+          order.finalAmount.toStringAsFixed(0),
+        ],
+    ];
+    final csv = rows.map((row) {
+      return row.map((value) => '"${value.replaceAll('"', '""')}"').join(',');
+    }).join('\r\n');
+
+    try {
+      await FileSaver.instance.saveFile(
+        name: 'freshfarm-don-hang',
+        bytes: Uint8List.fromList(utf8.encode('\uFEFF$csv')),
+        fileExtension: 'csv',
+        mimeType: MimeType.csv,
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Đã xuất báo cáo đơn hàng CSV.')),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Chưa lưu được báo cáo CSV.')),
+        );
+      }
+    }
   }
 
   @override
@@ -70,6 +112,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      OutlinedButton.icon(
+                        onPressed: orderProv.orders.isEmpty
+                            ? null
+                            : () => _exportOrders(orderProv),
+                        icon: const Icon(Icons.download_outlined),
+                        label: const Text('Xuất đơn hàng CSV'),
+                      ),
+                      const SizedBox(height: 10),
                       // KPI Cards Grid
                       Row(
                         children: [
