@@ -13,8 +13,10 @@ class TraceabilityProvider extends ChangeNotifier {
   BatchModel? get selectedBatch => _selectedBatch;
   bool get isLoading => _isLoading;
 
+  late final Future<void> loadCompletion;
+
   TraceabilityProvider() {
-    loadBatches();
+    loadCompletion = loadBatches();
   }
 
   Future<void> loadBatches() async {
@@ -35,41 +37,32 @@ class TraceabilityProvider extends ChangeNotifier {
 
   /// Searches for a batch by code, batchId, or scanned QR content
   Future<BatchModel?> findBatch(String query) async {
-    final clean = query.trim().toUpperCase();
-
-    // 1. Check local list
-    try {
-      final found = _batches.firstWhere(
-        (b) =>
-            b.id.toUpperCase() == clean ||
-            b.productId.toUpperCase() == clean ||
-            clean.contains(b.id.toUpperCase()),
-      );
-      _selectedBatch = found;
-      notifyListeners();
-      return found;
-    } catch (_) {}
-
-    // 2. Check Firestore
-    final cloudBatch = await FirebaseService.getBatchByCode(clean);
-    if (cloudBatch != null) {
-      _selectedBatch = cloudBatch;
-      notifyListeners();
-      return cloudBatch;
+    await loadCompletion;
+    const prefix = 'FRESHFARM-TRACE:';
+    final input = query.trim().toUpperCase();
+    final isTraceCode = input.startsWith(prefix);
+    final code = isTraceCode ? input.substring(prefix.length).trim() : input;
+    BatchModel? match;
+    if (code.isNotEmpty) {
+      for (final batch in _batches) {
+        if (batch.id.toUpperCase() == code ||
+            (!isTraceCode && batch.productId.toUpperCase() == code)) {
+          match = batch;
+          break;
+        }
+      }
+      match ??= await FirebaseService.getBatchByCode(code);
     }
-
-    // Default to the first demo batch if search fails, to show rich demo UI
-    if (_batches.isNotEmpty) {
-      _selectedBatch = _batches.first;
-      notifyListeners();
-      return _selectedBatch;
-    }
-    return null;
+    _selectedBatch = match;
+    notifyListeners();
+    return match;
   }
 
   Future<void> addNewBatch(BatchModel batch) async {
-    _batches.insert(0, batch);
-    await StorageService.saveBatches(_batches);
+    await loadCompletion;
+    final updated = [batch, ..._batches.where((entry) => entry.id != batch.id)];
+    await StorageService.saveBatches(updated);
+    _batches = updated;
     await FirebaseService.syncBatchToFirestore(batch);
     notifyListeners();
   }

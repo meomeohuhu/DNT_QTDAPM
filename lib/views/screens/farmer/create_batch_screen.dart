@@ -43,18 +43,25 @@ class _CreateBatchScreenState extends State<CreateBatchScreen> {
     super.dispose();
   }
 
+  bool _saving = false;
+
   Future<void> _handleSaveBatch() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (_saving || !_formKey.currentState!.validate()) return;
 
     final prodProv = Provider.of<ProductProvider>(context, listen: false);
     final traceProv = Provider.of<TraceabilityProvider>(context, listen: false);
 
+    if (prodProv.products.isEmpty) return;
     final product = prodProv.products.firstWhere(
       (p) => p.id == _selectedProductId,
       orElse: () => prodProv.products.first,
     );
 
     final now = DateTime.now();
+    String dateAt(int offset) {
+      final date = DateTime(now.year, now.month, now.day + offset);
+      return '${date.day}/${date.month}/${date.year}';
+    }
     final batchCode = 'BATCH-${product.id.replaceAll('PROD-', '')}-${now.year}-${const Uuid().v4().substring(0, 4).toUpperCase()}';
 
     final newBatch = BatchModel(
@@ -64,8 +71,8 @@ class _CreateBatchScreenState extends State<CreateBatchScreen> {
       farmId: product.farmId,
       farmName: product.farmName,
       farmLocation: product.region,
-      harvestDate: '${now.day}/${now.month}/${now.year}',
-      expiryDate: '${now.day + 14}/${now.month}/${now.year}',
+      harvestDate: dateAt(0),
+      expiryDate: dateAt(14),
       certType: _certType,
       certNumber: _certNumberController.text.trim(),
       certAuthority: 'Chi cục Trồng trọt & Bảo vệ Thực vật',
@@ -76,28 +83,39 @@ class _CreateBatchScreenState extends State<CreateBatchScreen> {
         TimelineStepModel(
           title: 'Gieo hạt và cấy mô sinh học',
           description: 'Xuống giống tại vườn ươm tiêu chuẩn công nghệ cao.',
-          timestamp: '${now.day - 45}/${now.month}/${now.year} 08:00',
+          timestamp: '${dateAt(-45)} 08:00',
           location: product.region,
           responsiblePerson: 'Ban Quản trị Vườn',
         ),
         TimelineStepModel(
           title: 'Kiểm tra dư lượng BVTV tại đồng',
           description: _testResultsController.text.trim(),
-          timestamp: '${now.day - 2}/${now.month}/${now.year} 10:30',
+          timestamp: '${dateAt(-2)} 10:30',
           location: 'Phòng Lab Kiểm định Chất lượng',
           responsiblePerson: _inspectorController.text.trim(),
         ),
         TimelineStepModel(
           title: 'Thu hoạch và sinh mã QR động',
           description: 'Thu hoạch mẻ hàng tươi ngon và in tem truy xuất điện tử.',
-          timestamp: '${now.day}/${now.month}/${now.year} 06:00',
+          timestamp: '${dateAt(0)} 06:00',
           location: product.farmName,
           responsiblePerson: 'Tổ trưởng thu hái',
         ),
       ],
     );
 
-    await traceProv.addNewBatch(newBatch);
+    setState(() => _saving = true);
+    try {
+      await traceProv.addNewBatch(newBatch);
+    } catch (_) {
+      if (mounted) {
+        setState(() => _saving = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Chưa lưu được lô hàng.')),
+        );
+      }
+      return;
+    }
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -187,7 +205,7 @@ class _CreateBatchScreenState extends State<CreateBatchScreen> {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
-                  onPressed: _handleSaveBatch,
+                  onPressed: _saving || prodProv.products.isEmpty ? null : _handleSaveBatch,
                   icon: const Icon(Icons.qr_code_2),
                   label: const Text('Tạo lô hàng & Sinh mã QR truy xuất'),
                   style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14)),

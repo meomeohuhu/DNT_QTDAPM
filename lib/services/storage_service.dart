@@ -75,7 +75,9 @@ class StorageService {
   static Future<void> saveBatches(List<BatchModel> batches) async {
     final prefs = await SharedPreferences.getInstance();
     final list = batches.map((b) => jsonEncode(b.toMap())).toList();
-    await prefs.setStringList(_keyBatches, list);
+    if (!await prefs.setStringList(_keyBatches, list)) {
+      throw StateError('Could not save batches');
+    }
   }
 
   static Future<List<BatchModel>?> getBatches() async {
