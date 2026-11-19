@@ -14,7 +14,7 @@
 > - **Nguyễn Thành Thịnh** – 23IT262 (Backend & Database Developer)
 > - **Lê Thị Diệu Tâm** – 23IT244 (Frontend Lead, Tester & BA)
 
----
+----
 
 ## I. TỔNG QUAN DỰ ÁN VÀ TÍNH ĐỒNG BỘ 2 MÔN HỌC
 
