@@ -28,6 +28,27 @@ class StorageService {
     return UserRole.customer;
   }
 
+  static Future<UserModel?> getProfile(String userId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final data = prefs.getString('demo_profile_$userId');
+    if (data == null) return null;
+    try {
+      return UserModel.fromMap(jsonDecode(data) as Map<String, dynamic>);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static Future<void> saveProfile(UserModel profile) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!await prefs.setString(
+      'demo_profile_${profile.id}',
+      jsonEncode(profile.toMap()),
+    )) {
+      throw StateError('Could not save profile');
+    }
+  }
+
   static Future<void> saveOrders(List<OrderModel> orders) async {
     final prefs = await SharedPreferences.getInstance();
     final list = orders.map((o) => jsonEncode(o.toMap())).toList();

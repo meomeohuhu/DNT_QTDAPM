@@ -7,6 +7,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../widgets/role_selector_bar.dart';
 import '../../widgets/product_card.dart';
 import 'cart_screen.dart';
+import 'customer_profile_screen.dart';
 import 'qr_scanner_screen.dart';
 import 'order_history_screen.dart';
 
@@ -36,6 +37,15 @@ class CustomerHomeScreen extends StatelessWidget {
           ],
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.person_outline),
+            tooltip: 'Hồ sơ giao hàng',
+            onPressed: auth.currentUser == null
+                ? null
+                : () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const CustomerProfileScreen()),
+                    ),
+          ),
           IconButton(
             icon: const Icon(Icons.qr_code_scanner),
             tooltip: 'Quét mã QR truy xuất nguồn gốc',

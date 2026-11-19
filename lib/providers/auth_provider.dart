@@ -16,23 +16,48 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> _initAuth() async {
-    _activeRole = await StorageService.getActiveRole();
-    _currentUser = _allMockUsers.firstWhere(
-      (u) => u.role == _activeRole,
-      orElse: () => _allMockUsers.first,
-    );
+    final role = await StorageService.getActiveRole();
+    if (_currentUser == null) await _selectRole(role);
+  }
+
+  Future<void> _selectRole(UserRole role) async {
+    final demoUser = _allMockUsers.firstWhere((user) => user.role == role);
+    _activeRole = role;
+    _currentUser = demoUser;
+    final profile = await StorageService.getProfile(demoUser.id);
+    if (!identical(_currentUser, demoUser)) return;
+    _currentUser = profile ?? demoUser;
     notifyListeners();
   }
 
-  /// Switch the active role seamlessly for multi-role demonstration
+  /// Switch the active role for multi-role demonstration.
   Future<void> switchRole(UserRole newRole) async {
-    _activeRole = newRole;
-    _currentUser = _allMockUsers.firstWhere(
-      (u) => u.role == newRole,
-      orElse: () => _allMockUsers.first,
+    await _selectRole(newRole);
+    await StorageService.saveActiveRole(_activeRole);
+  }
+
+  Future<void> updateProfile({
+    required String name,
+    required String phone,
+    required String address,
+  }) async {
+    final user = _currentUser;
+    if (user == null) return;
+    final profile = UserModel(
+      id: user.id,
+      name: name,
+      email: user.email,
+      phone: phone,
+      role: user.role,
+      address: address,
+      avatarUrl: user.avatarUrl,
+      farmName: user.farmName,
     );
-    await StorageService.saveActiveRole(newRole);
-    notifyListeners();
+    await StorageService.saveProfile(profile);
+    if (_currentUser?.id == user.id) {
+      _currentUser = profile;
+      notifyListeners();
+    }
   }
 
   void login(String email, String password) {
