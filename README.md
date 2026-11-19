@@ -165,3 +165,14 @@ flutter test     # Kết quả: All tests passed!
 | 4.16 Kết nối dữ liệu | Lưu cục bộ mặc định. Firebase là tùy chọn cho dữ liệu demo. |
 
 Các hạng mục sản xuất trong plan còn mở gồm xác thực OTP và phân quyền máy chủ, đồng bộ đơn và giao dịch kho giữa thiết bị, đổi/trả, thanh toán qua cổng và webhook, tích hợp hãng giao, đợt flash sale và push notification, QR chống sao chép, đo hiệu năng trên thiết bị, nghiệm thu và triển khai chính thức. Plan ghi NestJS, React, React Native, MySQL và Redis. Mã nguồn demo dùng Flutter và có tích hợp Firebase tùy chọn.
+
+### Kịch bản kiểm thử demo cục bộ
+
+| WBS | Thao tác | Kết quả mong đợi |
+| --- | --- | --- |
+| 4.3–4.4, 4.7 | Khách đặt một đơn, kiểm tra kho rồi hủy khi đơn còn chờ xác nhận. | Tồn giảm đúng số lượng khi đặt và tăng lại đúng một lần khi hủy. Mở lại app để kiểm tra dữ liệu. |
+| 4.4, 4.8 | Kho chuyển một đơn qua các bước đến giao thành công. Khách gửi lý do đổi/trả, kho duyệt hoặc từ chối. | Khách xem được kết quả trong lịch sử. Yêu cầu đã xử lý không thể xử lý lần nữa. Duyệt yêu cầu chưa tự nhập lại tồn hoặc hoàn tiền. |
+| 4.6, 4.9, 4.14 | Nông hộ tạo lô. Mở lại app và nhập mã lô hoặc quét QR của lô đó. Thử thêm ký tự vào mã rồi tìm lại. | Mã đúng mở đúng hồ sơ. Mã sai báo không tìm thấy. |
+| 4.11 | Admin xuất CSV đơn hàng sau khi xử lý đơn. | Mã đơn, phương thức và trạng thái khớp với màn hình. |
+
+Chạy `flutter test` và `flutter build web` để kiểm tra bản nộp. Khi nghiệm thu bằng camera thật, ghi thiết bị, commit, mã lô, số lần đo và thời gian từ lúc nhận mã đến lúc hiển thị hồ sơ.
