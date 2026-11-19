@@ -1,3 +1,12 @@
+enum ReturnRequestStatus {
+  pending('Chờ kho xử lý'),
+  approved('Đã chấp nhận'),
+  rejected('Đã từ chối');
+
+  const ReturnRequestStatus(this.label);
+  final String label;
+}
+
 enum OrderStatus {
   pending, // Chờ duyệt
   confirmed, // Đã xác nhận
@@ -113,6 +122,9 @@ class OrderModel {
   final double discountAmount;
   final double finalAmount;
   final PaymentMethod paymentMethod;
+  final bool reservesStock;
+  String? returnReason;
+  ReturnRequestStatus? returnStatus;
   bool isPaid;
   OrderStatus status;
   final DateTime createdAt;
@@ -133,6 +145,9 @@ class OrderModel {
     required this.finalAmount,
     required this.paymentMethod,
     this.isPaid = false,
+    this.reservesStock = false,
+    this.returnReason,
+    this.returnStatus,
     this.status = OrderStatus.pending,
     required this.createdAt,
     required this.deliveryTrackingCode,
@@ -154,6 +169,9 @@ class OrderModel {
       'finalAmount': finalAmount,
       'paymentMethod': paymentMethod.name,
       'isPaid': isPaid,
+      'reservesStock': reservesStock,
+      'returnReason': returnReason,
+      'returnStatus': returnStatus?.name,
       'status': status.name,
       'createdAt': createdAt.toIso8601String(),
       'deliveryTrackingCode': deliveryTrackingCode,
@@ -182,6 +200,9 @@ class OrderModel {
         orElse: () => PaymentMethod.cod,
       ),
       isPaid: map['isPaid'] ?? false,
+      reservesStock: map['reservesStock'] == true,
+      returnReason: map['returnReason'],
+      returnStatus: ReturnRequestStatus.values.asNameMap()[map['returnStatus']],
       status: OrderStatus.values.firstWhere(
         (s) => s.name == map['status'],
         orElse: () => OrderStatus.pending,

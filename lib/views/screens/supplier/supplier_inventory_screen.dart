@@ -154,18 +154,16 @@ class _SupplierInventoryScreenState extends State<SupplierInventoryScreen> with 
                                 IconButton(
                                   icon: const Icon(Icons.remove_circle_outline, color: AppColors.textSecondary),
                                   tooltip: 'Giảm 10',
-                                  onPressed: () {
-                                    if (p.stockQuantity >= 10) {
-                                      prodProv.deductStock(p.id, 10);
-                                    }
-                                  },
+                                  onPressed: p.stockQuantity < 10 ? null : () => _saveAction(
+                                    context, () => prodProv.adjustStock(p.id, -10), 'Đã xuất kho.',
+                                  ),
                                 ),
                                 IconButton(
                                   icon: const Icon(Icons.add_circle_outline, color: AppColors.primary),
                                   tooltip: 'Nhập kho +20',
-                                  onPressed: () {
-                                    prodProv.updateProduct(p.copyWith(stockQuantity: p.stockQuantity + 20));
-                                  },
+                                  onPressed: () => _saveAction(
+                                    context, () => prodProv.adjustStock(p.id, 20), 'Đã nhập kho.',
+                                  ),
                                 ),
                               ],
                             ),
@@ -236,16 +234,11 @@ class _SupplierInventoryScreenState extends State<SupplierInventoryScreen> with 
                                 ),
                                 if (nextState != null)
                                   ElevatedButton.icon(
-                                    onPressed: () {
-                                      orderProv.advanceOrderStatus(order.id);
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(
-                                          content: Text('Đơn ${order.id} chuyển sang: ${nextState.displayName}'),
-                                          backgroundColor: AppColors.primary,
-                                          duration: const Duration(seconds: 1),
-                                        ),
-                                      );
-                                    },
+                                    onPressed: () => _saveAction(
+                                      context,
+                                      () => orderProv.advanceOrderStatus(order.id, order.status),
+                                      'Đơn ${order.id} chuyển sang: ${nextState.displayName}',
+                                    ),
                                     icon: const Icon(Icons.arrow_forward, size: 14),
                                     label: Text(
                                       'Chuyển sang: ${nextState.displayName}',
@@ -263,6 +256,27 @@ class _SupplierInventoryScreenState extends State<SupplierInventoryScreen> with 
                                   ),
                               ],
                             ),
+                            if (order.returnStatus case final status?)
+                              Text('Đổi/trả: ${status.label} · ${order.returnReason ?? ''}'),
+                            if (order.returnStatus == ReturnRequestStatus.pending)
+                              Wrap(
+                                children: [
+                                  TextButton(
+                                    onPressed: () => _saveAction(
+                                      context, () => orderProv.resolveReturn(order.id, approve: false),
+                                      'Đã từ chối yêu cầu.',
+                                    ),
+                                    child: const Text('Từ chối'),
+                                  ),
+                                  TextButton(
+                                    onPressed: () => _saveAction(
+                                      context, () => orderProv.resolveReturn(order.id, approve: true),
+                                      'Đã chấp nhận yêu cầu.',
+                                    ),
+                                    child: const Text('Chấp nhận'),
+                                  ),
+                                ],
+                              ),
                           ],
                         ),
                       ),
@@ -275,6 +289,22 @@ class _SupplierInventoryScreenState extends State<SupplierInventoryScreen> with 
         ],
       ),
     );
+  }
+
+  Future<void> _saveAction(
+    BuildContext context,
+    Future<bool> Function() action,
+    String success,
+  ) async {
+    String message;
+    try {
+      message = await action() ? success : 'Dữ liệu đã thay đổi hoặc tồn kho không đủ.';
+    } catch (_) {
+      message = 'Chưa lưu được thay đổi.';
+    }
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    }
   }
 }
 

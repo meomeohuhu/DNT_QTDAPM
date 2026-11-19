@@ -64,6 +64,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     final prodProv = Provider.of<ProductProvider>(context, listen: false);
 
     await orderProv.loadCompletion;
+    await prodProv.loadCompletion;
     if (!mounted || !_canPlaceOrder()) return;
 
     final orderItems = cart.items.map((item) {
@@ -92,11 +93,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       finalAmount: cart.totalAmount,
       paymentMethod: _selectedPayment,
       isPaid: isPrepaid,
+      availableStock: (id) => prodProv.getProductById(id)?.stockQuantity ?? 0,
     );
 
-    for (final item in orderItems) {
-      prodProv.deductStock(item.productId, item.quantity);
-    }
     cart.clearCart();
 
     if (mounted) {
@@ -152,10 +151,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       }
 
       await _submitOrder(orderId, isPrepaid: isPrepaid);
-    } catch (_) {
+    } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Chưa lưu được đơn hàng. Vui lòng thử lại.')),
+          SnackBar(content: Text(error is StateError
+              ? error.message.toString()
+              : 'Chưa lưu được đơn hàng. Vui lòng thử lại.')),
         );
       }
     } finally {

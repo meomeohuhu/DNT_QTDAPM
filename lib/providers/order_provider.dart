@@ -7,6 +7,7 @@ import '../services/storage_service.dart';
 class OrderProvider extends ChangeNotifier {
   List<OrderModel> _orders = [];
   bool _isLoading = false;
+  Future<void> _operation = Future.value();
 
   List<OrderModel> get orders => _orders;
   bool get isLoading => _isLoading;
@@ -42,6 +43,23 @@ class OrderProvider extends ChangeNotifier {
     return _orders.where((o) => o.userId == userId).toList();
   }
 
+  Future<T> runInventoryOperation<T>(Future<T> Function() action) {
+    final next = _operation.then((_) async {
+      await loadCompletion;
+      return action();
+    });
+    _operation = next.then<void>((_) {}, onError: (Object error, StackTrace stack) {});
+    return next;
+  }
+
+  int reservedQuantity(String productId) {
+    return _orders
+        .where((order) => order.reservesStock && order.status != OrderStatus.cancelled)
+        .expand((order) => order.items)
+        .where((item) => item.productId == productId)
+        .fold(0, (total, item) => total + item.quantity);
+  }
+
   String newOrderId() {
     final now = DateTime.now();
     final date = now.toIso8601String().substring(0, 10).replaceAll('-', '');
@@ -64,7 +82,21 @@ class OrderProvider extends ChangeNotifier {
     required double finalAmount,
     required PaymentMethod paymentMethod,
     bool isPaid = false,
-  }) async {
+    required int Function(String productId) availableStock,
+  }) => runInventoryOperation(() async {
+    for (final order in _orders) {
+      if (order.id == orderId) return order;
+    }
+    if (items.isEmpty) throw StateError('Đơn hàng chưa có sản phẩm.');
+    final quantities = <String, int>{};
+    for (final item in items) {
+      if (item.quantity <= 0) throw StateError('Số lượng sản phẩm không hợp lệ.');
+      final quantity = (quantities[item.productId] ?? 0) + item.quantity;
+      if (quantity > availableStock(item.productId)) {
+        throw StateError('${item.productName} không đủ hàng trong kho.');
+      }
+      quantities[item.productId] = quantity;
+    }
     final newOrder = OrderModel(
       id: orderId,
       userId: userId,
@@ -72,7 +104,8 @@ class OrderProvider extends ChangeNotifier {
       userPhone: userPhone,
       shippingAddress: shippingAddress,
       deliveryNote: deliveryNote,
-      items: items,
+      items: List.unmodifiable(items),
+      reservesStock: true,
       totalAmount: totalAmount,
       shippingFee: shippingFee,
       discountAmount: discountAmount,
@@ -90,31 +123,65 @@ class OrderProvider extends ChangeNotifier {
     _orders = updatedOrders;
     notifyListeners();
     return newOrder;
+  });
+
+  Future<bool> advanceOrderStatus(String orderId, OrderStatus expectedStatus) {
+    return _updateOrder(orderId, (order) {
+      if (order.status != expectedStatus) return false;
+      final next = order.status.nextState;
+      if (next == null) return false;
+      order.status = next;
+      if (next == OrderStatus.delivered) order.isPaid = true;
+      return true;
+    });
   }
 
-  Future<void> advanceOrderStatus(String orderId) async {
-    final index = _orders.indexWhere((o) => o.id == orderId);
-    if (index != -1) {
-      final current = _orders[index];
-      final next = current.status.nextState;
-      if (next != null) {
-        current.status = next;
-        if (next == OrderStatus.delivered) {
-          current.isPaid = true;
-        }
-        await StorageService.saveOrders(_orders);
-        notifyListeners();
+  Future<bool> cancelOrder(String orderId, String userId) {
+    return _updateOrder(orderId, (order) {
+      if (order.userId != userId || order.status != OrderStatus.pending) {
+        return false;
       }
-    }
+      order.status = OrderStatus.cancelled;
+      return true;
+    });
   }
 
-  Future<void> cancelOrder(String orderId) async {
-    final index = _orders.indexWhere((o) => o.id == orderId);
-    if (index != -1) {
-      _orders[index].status = OrderStatus.cancelled;
-      await StorageService.saveOrders(_orders);
+  Future<bool> requestReturn(String orderId, String userId, String reason) {
+    return _updateOrder(orderId, (order) {
+      if (order.userId != userId ||
+          order.status != OrderStatus.delivered ||
+          order.returnStatus != null ||
+          reason.trim().isEmpty) {
+        return false;
+      }
+      order.returnReason = reason.trim();
+      order.returnStatus = ReturnRequestStatus.pending;
+      return true;
+    });
+  }
+
+  Future<bool> resolveReturn(String orderId, {required bool approve}) {
+    return _updateOrder(orderId, (order) {
+      if (order.returnStatus != ReturnRequestStatus.pending) return false;
+      order.returnStatus = approve
+          ? ReturnRequestStatus.approved
+          : ReturnRequestStatus.rejected;
+      return true;
+    });
+  }
+
+  Future<bool> _updateOrder(String orderId, bool Function(OrderModel) update) {
+    return runInventoryOperation(() async {
+      final index = _orders.indexWhere((order) => order.id == orderId);
+      if (index == -1) return false;
+      final order = OrderModel.fromMap(_orders[index].toMap());
+      if (!update(order)) return false;
+      final updated = [..._orders]..[index] = order;
+      await StorageService.saveOrders(updated);
+      _orders = updated;
       notifyListeners();
-    }
+      return true;
+    });
   }
 
   // Dashboard Aggregations for Admin

@@ -261,8 +261,8 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> with SingleTick
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton.icon(
-                  onPressed: () {
-                    showDialog(
+                  onPressed: () async {
+                    final confirmed = await showDialog<bool>(
                       context: context,
                       builder: (ctx) => AlertDialog(
                         title: const Text('Hủy đơn hàng'),
@@ -273,15 +273,17 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> with SingleTick
                             child: const Text('Đóng'),
                           ),
                           ElevatedButton(
-                            onPressed: () {
-                              orderProv.cancelOrder(order.id);
-                              Navigator.of(ctx).pop();
-                            },
-                            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+                            onPressed: () => Navigator.of(ctx).pop(true),
                             child: const Text('Xác nhận hủy'),
                           ),
                         ],
                       ),
+                    );
+                    if (!context.mounted || confirmed != true) return;
+                    await _saveOrderAction(
+                      context,
+                      () => orderProv.cancelOrder(order.id, order.userId),
+                      'Đã hủy đơn hàng.',
                     );
                   },
                   icon: const Icon(Icons.cancel, size: 14, color: AppColors.error),
@@ -289,10 +291,74 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> with SingleTick
                 ),
               ),
             ],
+            if (order.status == OrderStatus.delivered && order.returnStatus == null)
+              TextButton(
+                onPressed: () => _requestReturn(context, orderProv, order),
+                child: const Text('Yêu cầu đổi/trả'),
+              ),
+            if (order.returnStatus case final status?)
+              Text('Đổi/trả: ${status.label} · ${order.returnReason ?? ''}'),
           ],
         ),
       ),
     );
+  }
+
+  Future<void> _requestReturn(
+    BuildContext context,
+    OrderProvider orders,
+    OrderModel order,
+  ) async {
+    String reason = '';
+    final form = GlobalKey<FormState>();
+    final submitted = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Yêu cầu đổi/trả'),
+        content: Form(
+          key: form,
+          child: TextFormField(
+            maxLength: 200,
+            decoration: const InputDecoration(labelText: 'Lý do đổi/trả'),
+            validator: (value) => value == null || value.trim().isEmpty
+                ? 'Nhập lý do đổi/trả'
+                : null,
+            onChanged: (value) => reason = value,
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Đóng')),
+          ElevatedButton(
+            onPressed: () {
+              if (form.currentState!.validate()) Navigator.of(ctx).pop(true);
+            },
+            child: const Text('Gửi yêu cầu'),
+          ),
+        ],
+      ),
+    );
+    if (!context.mounted || submitted != true) return;
+    await _saveOrderAction(
+      context,
+      () => orders.requestReturn(order.id, order.userId, reason),
+      'Đã gửi yêu cầu đổi/trả.',
+    );
+  }
+
+  Future<void> _saveOrderAction(
+    BuildContext context,
+    Future<bool> Function() action,
+    String success,
+  ) async {
+    String message;
+    try {
+      message = await action() ? success : 'Trạng thái đơn đã thay đổi.';
+    } catch (_) {
+      message = 'Chưa lưu được thay đổi.';
+    }
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    }
   }
 }
 

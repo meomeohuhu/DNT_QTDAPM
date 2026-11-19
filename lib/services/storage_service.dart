@@ -96,7 +96,9 @@ class StorageService {
   static Future<void> saveProducts(List<ProductModel> products) async {
     final prefs = await SharedPreferences.getInstance();
     final list = products.map((p) => jsonEncode(p.toMap())).toList();
-    await prefs.setStringList(_keyProducts, list);
+    if (!await prefs.setStringList(_keyProducts, list)) {
+      throw StateError('Could not save products');
+    }
   }
 
   static Future<List<ProductModel>?> getProducts() async {

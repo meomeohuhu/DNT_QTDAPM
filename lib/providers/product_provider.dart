@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/product_model.dart';
+import 'order_provider.dart';
 import '../services/mock_data_service.dart';
 import '../services/storage_service.dart';
 import '../services/firebase_service.dart';
@@ -11,14 +12,29 @@ class ProductProvider extends ChangeNotifier {
   String _searchQuery = '';
   bool _isLoading = false;
 
-  List<ProductModel> get products => _products;
+  final OrderProvider _orders;
+  late final Future<void> loadCompletion;
+
+  List<ProductModel> get products => _products.map(_availableProduct).toList();
+
+  ProductModel _availableProduct(ProductModel product) {
+    final available = product.stockQuantity - _orders.reservedQuantity(product.id);
+    return product.copyWith(stockQuantity: available < 0 ? 0 : available);
+  }
   String get selectedCategory => _selectedCategory;
   String get selectedCertification => _selectedCertification;
   String get searchQuery => _searchQuery;
   bool get isLoading => _isLoading;
 
-  ProductProvider() {
-    loadProducts();
+  ProductProvider(this._orders) {
+    _orders.addListener(notifyListeners);
+    loadCompletion = loadProducts();
+  }
+
+  @override
+  void dispose() {
+    _orders.removeListener(notifyListeners);
+    super.dispose();
   }
 
   Future<void> loadProducts() async {
@@ -58,7 +74,7 @@ class ProductProvider extends ChangeNotifier {
   }
 
   List<ProductModel> get filteredProducts {
-    return _products.where((p) {
+    return products.where((p) {
       final matchCategory = _selectedCategory == 'Tất cả' || p.category == _selectedCategory;
       final matchCert = _selectedCertification == 'Tất cả' || p.certification == _selectedCertification;
       final matchQuery = _searchQuery.isEmpty ||
@@ -69,7 +85,7 @@ class ProductProvider extends ChangeNotifier {
   }
 
   List<ProductModel> get featuredProducts {
-    return _products.where((p) => p.isFeatured).toList();
+    return products.where((p) => p.isFeatured).toList();
   }
 
   void setCategory(String category) {
@@ -89,42 +105,26 @@ class ProductProvider extends ChangeNotifier {
 
   ProductModel? getProductById(String id) {
     try {
-      return _products.firstWhere((p) => p.id == id);
+      return _availableProduct(_products.firstWhere((p) => p.id == id));
     } catch (_) {
       return null;
     }
   }
 
-  Future<void> addProduct(ProductModel product) async {
-    _products.insert(0, product);
-    await StorageService.saveProducts(_products);
-    notifyListeners();
-  }
-
-  Future<void> updateProduct(ProductModel product) async {
-    final index = _products.indexWhere((p) => p.id == product.id);
-    if (index != -1) {
-      _products[index] = product;
-      await StorageService.saveProducts(_products);
+  Future<bool> adjustStock(String productId, int change) {
+    return _orders.runInventoryOperation(() async {
+      await loadCompletion;
+      final index = _products.indexWhere((product) => product.id == productId);
+      if (index == -1) return false;
+      final product = _products[index];
+      if (_availableProduct(product).stockQuantity + change < 0) return false;
+      final updated = [..._products]..[index] = product.copyWith(
+        stockQuantity: product.stockQuantity + change,
+      );
+      await StorageService.saveProducts(updated);
+      _products = updated;
       notifyListeners();
-    }
-  }
-
-  Future<void> deleteProduct(String id) async {
-    _products.removeWhere((p) => p.id == id);
-    await StorageService.saveProducts(_products);
-    notifyListeners();
-  }
-
-  void deductStock(String productId, int quantity) {
-    final index = _products.indexWhere((p) => p.id == productId);
-    if (index != -1) {
-      final current = _products[index];
-      final newQty = (current.stockQuantity - quantity).clamp(0, 99999);
-      _products[index] = current.copyWith(stockQuantity: newQty);
-      StorageService.saveProducts(_products);
-      notifyListeners();
-    }
+      return true;
+    });
   }
 }
-
